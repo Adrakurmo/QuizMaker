@@ -62,15 +62,6 @@
           </div>
         </div>
       {/each}
-        <!-- 
-          
-            
-            
-          </div>
-            
-
-            </div>
-        </div> -->
     </div>
   </div>
 </main>
