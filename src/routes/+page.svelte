@@ -1,15 +1,29 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+    import { slide } from "svelte/transition";
 
   type QuizItem = {
     id: number;
     name: string;
   }
+
+  type QuizQuestion = {
+    question_text: string;
+    is_multiple_choice: boolean;
+    answers: QuestionAnswer[];
+  }
+
+  type QuestionAnswer = {
+    answer_text: string;
+    is_correct: boolean;
+  }
   
   let isDarkMode = $state(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  let currentView = $state("add");
   let quizzes: QuizItem[] = $state([]);
-  let counter: number = 0;
-
+  let quizQuestions: QuizQuestion[] = $state([]);
+  let quizName: string = $state("GRUG");
+ 
   $effect(() => {
     if (isDarkMode) {
       document.body.classList.add('dark-mode');
@@ -22,11 +36,44 @@
     isDarkMode = !isDarkMode;
   }
 
-  async function newquiz(event: Event) {
+  async function newQuiz(event: Event) {
+    currentView = "add";
     event.preventDefault();
-    quizzes.push({
-      id: counter,
-      name: "GRUG" + counter
+    // quizzes.push({
+    //   id: counter,
+    //   name: "GRUG" + counter
+    // })
+  }
+
+  async function allQuizzes(event: Event) {
+    event.preventDefault();
+    currentView = "list";
+    quizQuestions = [];
+  }
+
+  async function addQuestion(event:Event) {
+    event.preventDefault();
+    quizQuestions.push({
+      question_text: "",
+      is_multiple_choice: false,
+      answers: [
+        {
+          answer_text: "",
+          is_correct: false,
+        },
+        {
+          answer_text: "",
+          is_correct: false,
+        },
+        {
+          answer_text: "",
+          is_correct: false,
+        },
+        {
+          answer_text: "",
+          is_correct: false,
+        }
+      ],
     })
   }
 
@@ -34,6 +81,41 @@
     event.preventDefault();
     console.log("Quit Clicked");
   }
+
+  async function removeAnswer(event: Event, question: QuizQuestion, answer: QuestionAnswer) {
+    event.preventDefault();
+    const idx = question.answers.indexOf(answer);
+    if (idx != -1) question.answers.splice(idx, 1);
+  }
+
+  async function removeQuestion(event: Event, question: QuizQuestion) {
+    event.preventDefault();
+    const idx = quizQuestions.indexOf(question);
+    if (idx != -1) quizQuestions.splice(idx, 1); 
+  }
+
+  async function addAnswer(event: Event, question: QuizQuestion) {
+    event.preventDefault();
+    question.answers.push({ answer_text: "", is_correct: false })
+  }
+
+  async function setIsCorrect(question: QuizQuestion ,answer: QuestionAnswer) {
+    question.answers.forEach(e => e.is_correct = false);
+    answer.is_correct = true;
+  }
+
+  async function saveQuiz(event: Event) {
+    console.log("Cała tablica:", $state.snapshot(quizQuestions));
+    event.preventDefault();
+    console.log("###", quizName)
+    quizQuestions.forEach(e => {
+      console.log(e.question_text);
+      e.answers.forEach(f => {
+        console.log("===", f.answer_text, "===", f.is_correct)
+      });
+    });
+  }
+
 </script>
 
 <main class="container">
@@ -41,13 +123,15 @@
     <div class="menu-header">Menu</div>
     
     <div class="btn-group">
-      <button class="menubtn" onclick={newquiz}>New Quiz</button>
+      <button class="menubtn" onclick={newQuiz}>New Quiz</button>
+      <button class="menubtn" onclick={allQuizzes}>All Quizzes</button>
       <button class="menubtn" onclick={toogleTheme}>{isDarkMode ? 'Dark' : 'Light'}</button>
       <button class="menubtn" onclick={quit}>Quit</button>
     </div>
   </div>
 
   <div class="content">
+    {#if currentView == "list"}
     <div class="quizz-grid">
       {#each quizzes as quiz}
         <div class="quizz-card">
@@ -63,11 +147,215 @@
         </div>
       {/each}
     </div>
+    {:else if currentView == "add"}
+      <div class="add-quiz-container">
+      <h2 class="section-title">Quiz Creator</h2>
+      <input class="input-main" placeholder="quiz name..." bind:value={quizName}>
+      <div class="questions-list">
+        {#each quizQuestions as question (question)}
+          <div class="question-card">
+            
+            <div class="question-header">
+              <input class="input-main" placeholder="question..." bind:value={question.question_text}>
+              <button class="btn-icon-delete" onclick={(e) => removeQuestion(e, question)}>✕</button>
+            </div>
+            <div class="answers-list">
+              {#each question.answers as answer (answer)}
+                <div class="answer-row">
+                  <input 
+                    type="radio" 
+                    class="radio-custom" 
+                    name="ans-{question.question_text}" 
+                    onchange={() => setIsCorrect(question, answer)}>
+
+                  <input class="input-sub" placeholder="answer..." bind:value={answer.answer_text}>
+                  <button class="btn-icon-small" onclick={(e) => removeAnswer(e, question, answer)}>✕</button>
+                </div>
+              {/each}
+              <button class="menubtn btn-primary" onclick={(e) => addAnswer(e, question)}>+</button>
+              </div>
+          </div>
+        {/each}
+      </div>
+
+      <div class="action-bar">
+        <button class="menubtn btn-secondary" onclick={addQuestion}>+ Add question</button>
+        <button class="menubtn btn-primary" onclick={saveQuiz}>Save Quiz</button>
+      </div>
+    </div>
+    {/if}
   </div>
 </main>
 
 <style>
 
+.add-quiz-container {
+  max-width: 800px; 
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding-bottom: 80px; 
+}
+
+.section-title {
+  text-align: center;
+  color: var(--text-color);
+  margin-bottom: 10px;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.question-card {
+  background-color: var(--bg-card); 
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid transparent;
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+:global(body:not(.dark-mode)) .question-card {
+  border: 1px solid #e0e0e0;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--bg-sidebar);
+  padding-bottom: 15px;
+}
+
+input {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--btn-hover);
+  box-shadow: 0 0 0 3px rgba(57, 108, 216, 0.2);
+}
+
+.input-main {
+  flex: 1;
+  padding: 12px 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+.input-sub {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  border: 1px solid var(--bg-sidebar);
+}
+
+.answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 10px; 
+}
+
+.answer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.radio-custom {
+  transform: scale(1.2); 
+  cursor: default;
+}
+
+.btn-icon-delete {
+  background: rgba(255, 0, 0, 0.1);
+  color: #d63031;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-icon-delete:hover {
+  background: #d63031;
+  color: white;
+}
+
+.btn-icon-small {
+  background: transparent;
+  color: #aaa;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+}
+
+.btn-icon-small:hover {
+  color: #d63031;
+  background-color: rgba(255,0,0,0.05);
+}
+
+.action-bar {
+  display: flex;
+  justify-content: flex-end; 
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed #ccc;
+}
+
+.btn-primary {
+  background-color: var(--color-success);
+  color: white;
+  padding: 12px 30px;
+}
+
+.btn-secondary {
+  background-color: var(--bg-sidebar);
+  border: 1px solid #ccc;
+}
+
+.quizz-card {
+    background-color: var(--bg-card);
+    color: var(--text-color);
+    border-radius: 12px;
+    padding: 20px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    min-height: 180px;
+  }
+
+.quizz-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding-bottom: 20px;
+}
 
 .action-btn:hover {
     opacity: 0.9;
@@ -126,27 +414,6 @@
     color: white;
     transition: opacity 0.2s ease, transform 0.1s ease;
   }
-
-.quizz-card {
-    background-color: var(--bg-card);
-    color: var(--text-color);
-    border-radius: 12px;
-    padding: 20px; 
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    min-height: 180px;
-  }
-
-.quizz-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    padding-bottom: 20px;
-}
 
 
   :global(body) {
