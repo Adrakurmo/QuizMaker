@@ -8,13 +8,12 @@
   }
 
   type QuizQuestion = {
-    question_text: string;
-    is_multiple_choice: boolean;
+    text: string;
     answers: QuestionAnswer[];
   }
 
   type QuestionAnswer = {
-    answer_text: string;
+    text: string;
     is_correct: boolean;
   }
   
@@ -54,23 +53,23 @@
   async function addQuestion(event:Event) {
     event.preventDefault();
     quizQuestions.push({
-      question_text: "",
-      is_multiple_choice: false,
+      text: "",
+      // is_multiple_choice: false,
       answers: [
         {
-          answer_text: "",
+          text: "",
           is_correct: false,
         },
         {
-          answer_text: "",
+          text: "",
           is_correct: false,
         },
         {
-          answer_text: "",
+          text: "",
           is_correct: false,
         },
         {
-          answer_text: "",
+          text: "",
           is_correct: false,
         }
       ],
@@ -96,7 +95,7 @@
 
   async function addAnswer(event: Event, question: QuizQuestion) {
     event.preventDefault();
-    question.answers.push({ answer_text: "", is_correct: false })
+    question.answers.push({ text: "", is_correct: false })
   }
 
   async function setIsCorrect(question: QuizQuestion ,answer: QuestionAnswer) {
@@ -105,15 +104,17 @@
   }
 
   async function saveQuiz(event: Event) {
-    console.log("Cała tablica:", $state.snapshot(quizQuestions));
     event.preventDefault();
-    console.log("###", quizName)
-    quizQuestions.forEach(e => {
-      console.log(e.question_text);
-      e.answers.forEach(f => {
-        console.log("===", f.answer_text, "===", f.is_correct)
-      });
-    });
+    await invoke("add_quiz", { quizName: quizName, questions: quizQuestions });
+    // console.log("Cała tablica:", $state.snapshot(quizQuestions));
+    
+    // console.log("###", quizName)
+    // quizQuestions.forEach(e => {
+    //   console.log(e.text);
+    //   e.answers.forEach(f => {
+    //     console.log("===", f.text, "===", f.is_correct)
+    //   });
+    // });
   }
 
 </script>
@@ -156,7 +157,7 @@
           <div class="question-card">
             
             <div class="question-header">
-              <input class="input-main" placeholder="question..." bind:value={question.question_text}>
+              <input class="input-main" placeholder="question..." bind:value={question.text}>
               <button class="btn-icon-delete" onclick={(e) => removeQuestion(e, question)}>✕</button>
             </div>
             <div class="answers-list">
@@ -165,10 +166,10 @@
                   <input 
                     type="radio" 
                     class="radio-custom" 
-                    name="ans-{question.question_text}" 
+                    name="ans-{question.text}" 
                     onchange={() => setIsCorrect(question, answer)}>
 
-                  <input class="input-sub" placeholder="answer..." bind:value={answer.answer_text}>
+                  <input class="input-sub" placeholder="answer..." bind:value={answer.text}>
                   <button class="btn-icon-small" onclick={(e) => removeAnswer(e, question, answer)}>✕</button>
                 </div>
               {/each}

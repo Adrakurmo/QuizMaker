@@ -1,6 +1,6 @@
 pub mod services;
-
-
+pub mod models;
+pub mod commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -8,8 +8,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(db_pool)
-        .invoke_handler(tauri::generate_handler![
-            
+        .invoke_handler(
+            tauri::generate_handler![
+                commands::main::add_quiz,
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

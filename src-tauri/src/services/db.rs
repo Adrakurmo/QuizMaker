@@ -2,6 +2,8 @@ use std::{fs, path::Path};
 
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 
+use crate::models::quiz::Quiz;
+
 pub type DbPool = Pool<Sqlite>;
 
 pub async fn init_db() -> Pool<Sqlite> {
@@ -62,4 +64,9 @@ pub async fn init_db() -> Pool<Sqlite> {
 
 
     pool
+}
+
+
+pub async fn add_quiz_to_db(pool: &DbPool<Sqlite>, quiz: &Quiz) {
+    sqlx::query("INSERT ");
 }
