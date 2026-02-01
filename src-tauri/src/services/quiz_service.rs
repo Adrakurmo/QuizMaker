@@ -4,16 +4,13 @@ const TITLE_MAX_LEN: usize = 60;
 
 pub fn validate_quiz_data(name: &String, mut _questions:  Vec<Question>) -> Result<Quiz, String> {
     let new_name: String = name.chars().take(TITLE_MAX_LEN).collect();
-    println!("{}", new_name);
 
     for q in _questions.iter_mut() {
         // Removing empty answers
         q.answers.retain(|a| !a.text.is_empty());
     }
-    println!("{}#", _questions.len());
     // Removing empty answers and questions without text
     _questions.retain(|q| !q.answers.is_empty() && !q.text.is_empty());
-    println!("{}#$", _questions.len());
 
     if _questions.is_empty() {
         return Err(String::from("No question for this quizz"))

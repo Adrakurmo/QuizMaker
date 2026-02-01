@@ -11,6 +11,7 @@ pub fn run() {
         .invoke_handler(
             tauri::generate_handler![
                 commands::main::add_quiz,
+                commands::main::get_quizzes_metadata,
             ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

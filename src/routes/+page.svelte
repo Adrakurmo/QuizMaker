@@ -1,10 +1,12 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+    import { onMount } from "svelte";
     import { slide } from "svelte/transition";
 
   type QuizItem = {
     id: number;
-    name: string;
+    title: string;
+    created_at: string;
   }
 
   type QuizQuestion = {
@@ -18,7 +20,7 @@
   }
   
   let isDarkMode = $state(window.matchMedia('(prefers-color-scheme: dark)').matches);
-  let currentView = $state("add");
+  let currentView = $state("list");
   let quizzes: QuizItem[] = $state([]);
   let quizQuestions: QuizQuestion[] = $state([]);
   let quizName: string = $state("GRUG");
@@ -31,17 +33,25 @@
     }
   });
 
+onMount(async () => {
+  loadAllQuizzes();
+});
+
   function toogleTheme() {
     isDarkMode = !isDarkMode;
   }
 
+  async function loadAllQuizzes() {
+    try {
+      quizzes = await invoke("get_quizzes_metadata")
+    } catch(err) {
+      alert(err);
+    }
+  }
+
   async function newQuiz(event: Event) {
-    currentView = "add";
     event.preventDefault();
-    // quizzes.push({
-    //   id: counter,
-    //   name: "GRUG" + counter
-    // })
+    currentView = "add";
   }
 
   async function allQuizzes(event: Event) {
@@ -54,7 +64,6 @@
     event.preventDefault();
     quizQuestions.push({
       text: "",
-      // is_multiple_choice: false,
       answers: [
         {
           text: "",
@@ -105,16 +114,15 @@
 
   async function saveQuiz(event: Event) {
     event.preventDefault();
-    await invoke("add_quiz", { quizName: quizName, questions: quizQuestions });
-    // console.log("Cała tablica:", $state.snapshot(quizQuestions));
+    try {
+      await invoke("add_quiz", { quizName: quizName, questions: quizQuestions });
+      await loadAllQuizzes(); //TODO tmp sol, instead of reloading everyting we can get just new quizz id... 
+      currentView = "list";
+    } catch (err) {
+      alert(err);
+    }
+
     
-    // console.log("###", quizName)
-    // quizQuestions.forEach(e => {
-    //   console.log(e.text);
-    //   e.answers.forEach(f => {
-    //     console.log("===", f.text, "===", f.is_correct)
-    //   });
-    // });
   }
 
 </script>
@@ -132,12 +140,15 @@
   </div>
 
   <div class="content">
+    <!-- ################################################################################################### -->
+    <!-- LIST -->
+    <!-- ################################################################################################### -->
     {#if currentView == "list"}
     <div class="quizz-grid">
       {#each quizzes as quiz}
         <div class="quizz-card">
           <div class="card-text">
-            <span class="quiz-name">halo co tam jak czi mija zycie</span>
+            <span class="quiz-name">{quiz.title}</span>
             <span class="quiz-meta">Q[0] GRUG</span>
           </div>
           <div class="quiz-edit-container">
@@ -148,6 +159,9 @@
         </div>
       {/each}
     </div>
+    <!-- ################################################################################################### -->
+    <!-- ADD -->
+    <!-- ################################################################################################### -->
     {:else if currentView == "add"}
       <div class="add-quiz-container">
       <h2 class="section-title">Quiz Creator</h2>
@@ -184,6 +198,11 @@
         <button class="menubtn btn-primary" onclick={saveQuiz}>Save Quiz</button>
       </div>
     </div>
+    <!-- ################################################################################################### -->
+    <!-- SOLVE  -->
+    <!-- ################################################################################################### -->
+
+
     {/if}
   </div>
 </main>

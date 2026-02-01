@@ -2,9 +2,7 @@ use std::{fs, path::Path};
 
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 
-use crate::models::quiz::Quiz;
-
-pub type DbPool = Pool<Sqlite>;
+use crate::models::{quiz::Quiz, quizmetadata::QuizMetadata};
 
 pub async fn init_db() -> Pool<Sqlite> {
     // TMP FOR TEST TIME LOL
@@ -24,6 +22,9 @@ pub async fn init_db() -> Pool<Sqlite> {
         .await
         .expect("Couldn't turn on FK");
 
+    // #########################################################################################
+    // QUIZZES
+    // #########################################################################################
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS quizzes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +36,9 @@ pub async fn init_db() -> Pool<Sqlite> {
         .await
         .expect("Somethin went wrong with creating table quizzes");
 
-
+    // #########################################################################################
+    // QUESTIONS
+    // #########################################################################################
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +51,9 @@ pub async fn init_db() -> Pool<Sqlite> {
         .await
         .expect("Somethin went wrong with creating table questions");
 
-
+    // #########################################################################################
+    // ANSWERS
+    // #########################################################################################
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS answers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,6 +72,49 @@ pub async fn init_db() -> Pool<Sqlite> {
 }
 
 
-pub async fn add_quiz_to_db(pool: &DbPool<Sqlite>, quiz: &Quiz) {
-    sqlx::query("INSERT ");
+pub async fn add_quiz_to_db(pool: &Pool<Sqlite>, quiz: &Quiz) -> Result<(), sqlx::Error> {
+    let quiz_insert = sqlx::query(
+        "INSERT INTO quizzes (title, created_at) VALUES (?, datetime('now'))"
+    )
+        .bind(&quiz.title)
+        .execute(pool)
+        .await?;
+
+    let quiz_id = quiz_insert.last_insert_rowid();
+
+    for question in quiz.questions.iter() {
+        let question_insert = sqlx::query (
+            "INSERT INTO questions (question_text, quiz_id) VALUES (?, ?)"
+        )
+            .bind(&question.text)
+            .bind(&quiz_id)
+            .execute(pool)
+            .await?;
+
+        let question_id = question_insert.last_insert_rowid();
+
+        for answer in question.answers.iter() {
+            sqlx::query(
+                "INSERT INTO answers (answer_text, is_correct, question_id) VALUES(?,?,?)"
+            )
+                .bind(&answer.text)
+                .bind(&answer.is_correct)
+                .bind(&question_id)
+                .execute(pool)
+                .await?;
+        }
+    } 
+
+    Ok(())
+}
+
+
+pub async fn get_quizzes_metadata_db(pool: &Pool<Sqlite>) -> Result<Vec<QuizMetadata>, sqlx::Error> {
+    let quizzes_md = sqlx::query_as::<sqlx::Sqlite, QuizMetadata>("
+        SELECT id, title, created_at FROM quizzes
+    ")
+        .fetch_all(pool)
+        .await?;
+
+    Ok(quizzes_md)
 }
